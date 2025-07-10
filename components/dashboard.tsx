@@ -185,7 +185,7 @@ export function Dashboard() {
               </Button>
             ))}
           </div>
-          <Button className="glass-hover-lift">
+          <Button className="glass-hover-lift" onClick={() => window.location.href = '/upload-studio'}>
             <Upload className="mr-2 h-4 w-4" />
             Upload Content
           </Button>

@@ -109,9 +109,13 @@ export function LandingPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
+              <Link href="/auth" passHref legacyBehavior>
+                <a>
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </a>
+              </Link>
               <Button size="sm" className="gradient-primary">
                 <Link href="/dashboard">Get Started</Link>
               </Button>

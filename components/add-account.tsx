@@ -23,7 +23,25 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-const platforms = [
+type PlatformField = {
+  id: string
+  label: string
+  placeholder: string
+  type: string
+  required?: boolean
+  options?: string[]
+}
+
+const platforms: {
+  name: string
+  icon: any
+  color: string
+  bgColor: string
+  borderColor: string
+  description: string
+  fields: PlatformField[]
+  guide: any
+}[] = [
   {
     name: "Instagram",
     icon: Instagram,
@@ -32,30 +50,13 @@ const platforms = [
     borderColor: "border-pink-200 dark:border-pink-800",
     description: "Connect your Instagram Business account to publish reels and posts",
     fields: [
-      {
-        id: "businessName",
-        label: "Business Account Name",
-        placeholder: "Your business name for reference",
-        type: "text",
-      },
-      {
-        id: "businessAccountId",
-        label: "Instagram Business Account ID",
-        placeholder: "Your Instagram business account ID",
-        type: "text",
-      },
-      {
-        id: "longLivedToken",
-        label: "Long-Lived Access Token",
-        placeholder: "Your Instagram long-lived access token",
-        type: "password",
-      },
-      {
-        id: "pageId",
-        label: "Connected Facebook Page ID",
-        placeholder: "Facebook page ID (if connected)",
-        type: "text",
-      },
+      { id: "instagramUsername", label: "Instagram Username", placeholder: "Your Instagram username", type: "text", required: false },
+      { id: "businessAccountId", label: "Instagram Business ID", placeholder: "Business account ID (from Graph API)", type: "text", required: true },
+      { id: "connectedPageId", label: "Connected Page ID", placeholder: "Facebook Page ID linked to this Instagram", type: "text", required: true },
+      { id: "instagramAccessToken", label: "Instagram Access Token", placeholder: "Access token (same as FB Page token)", type: "password", required: true },
+      { id: "tokenExpiryDate", label: "Token Expiry Date", placeholder: "Expiry date (optional)", type: "date", required: false },
+      { id: "reelCaptionTemplate", label: "Reel Caption Template", placeholder: "e.g., 🔥 {title} 🔥 #motivation #life", type: "textarea", required: false },
+      { id: "hashtagPresets", label: "Hashtag Presets", placeholder: "Add hashtags (comma or enter to separate)", type: "multitag", required: false },
     ],
     guide: {
       title: "How to get Instagram Business credentials",
@@ -90,15 +91,12 @@ const platforms = [
     borderColor: "border-blue-200 dark:border-blue-800",
     description: "Connect your Facebook Page to publish posts and videos",
     fields: [
-      { id: "pageName", label: "Facebook Page Name", placeholder: "Your page name for reference", type: "text" },
-      { id: "pageId", label: "Facebook Page ID", placeholder: "Your Facebook page ID", type: "text" },
-      {
-        id: "longLivedToken",
-        label: "Long-Lived Page Access Token",
-        placeholder: "Your Facebook page access token",
-        type: "password",
-      },
-      { id: "appId", label: "App ID", placeholder: "Your Facebook app ID", type: "text" },
+      { id: "pageName", label: "Page Name", placeholder: "Your page name for reference", type: "text", required: false },
+      { id: "pageId", label: "Page ID", placeholder: "Your Facebook page ID", type: "text", required: true },
+      { id: "pageAccessToken", label: "Page Access Token", placeholder: "Your Facebook page access token", type: "password", required: true },
+      { id: "tokenExpiryDate", label: "Token Expiry Date", placeholder: "Expiry date (optional)", type: "date", required: false },
+      { id: "postCaptionTemplate", label: "Post Caption Template", placeholder: "e.g. {title} - {date}", type: "textarea", required: false },
+      { id: "defaultVisibility", label: "Default Visibility", placeholder: "Select visibility", type: "dropdown", options: ["Public", "Private", "Unlisted"], required: false },
     ],
     guide: {
       title: "How to get Facebook Page credentials",
@@ -131,20 +129,13 @@ const platforms = [
     borderColor: "border-red-200 dark:border-red-800",
     description: "Connect your YouTube channel to upload videos and shorts",
     fields: [
-      {
-        id: "channelName",
-        label: "YouTube Channel Name",
-        placeholder: "Your channel name for reference",
-        type: "text",
-      },
-      { id: "clientId", label: "OAuth Client ID", placeholder: "Your YouTube OAuth client ID", type: "text" },
-      {
-        id: "clientSecret",
-        label: "OAuth Client Secret",
-        placeholder: "Your YouTube OAuth client secret",
-        type: "password",
-      },
-      { id: "refreshToken", label: "Refresh Token", placeholder: "Your YouTube refresh token", type: "password" },
+      { id: "channelName", label: "YouTube Channel Name", placeholder: "Your channel name for reference", type: "text", required: false },
+      { id: "accessToken", label: "YouTube Access Token", placeholder: "OAuth token (via Google API)", type: "password", required: false },
+      { id: "refreshToken", label: "Refresh Token", placeholder: "For regenerating access token", type: "password", required: false },
+      { id: "clientId", label: "Client ID", placeholder: "From Google Cloud Console", type: "password", required: false },
+      { id: "clientSecret", label: "Client Secret", placeholder: "Required with refresh token", type: "password", required: false },
+      { id: "videoTitleTemplate", label: "Video Title Template", placeholder: "Optional SEO templates", type: "text", required: false },
+      { id: "descriptionTemplate", label: "Description Template", placeholder: "Can support hashtags, etc.", type: "textarea", required: false },
     ],
     guide: {
       title: "How to get YouTube OAuth credentials",
@@ -330,26 +321,69 @@ export function AddAccount() {
                       >
                         <Label htmlFor={field.id} className="text-sm font-medium">
                           {field.label}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
                         </Label>
                         <div className="relative">
-                          <Input
-                            id={field.id}
-                            type={field.type === "password" && !showSecrets[field.id] ? "password" : "text"}
-                            placeholder={field.placeholder}
-                            value={formData[field.id] || ""}
-                            onChange={(e) => handleInputChange(field.id, e.target.value)}
-                            className="pr-10 text-sm"
-                          />
-                          {field.type === "password" && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full px-3"
-                              onClick={() => toggleSecretVisibility(field.id)}
+                          {field.type === "password" ? (
+                            <>
+                              <Input
+                                id={field.id}
+                                type={showSecrets[field.id] ? "text" : "password"}
+                                placeholder={field.placeholder}
+                                value={formData[field.id] || ""}
+                                onChange={(e) => handleInputChange(field.id, e.target.value)}
+                                className="pr-10 text-sm"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3"
+                                onClick={() => toggleSecretVisibility(field.id)}
+                              >
+                                {showSecrets[field.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </>
+                          ) : field.type === "textarea" ? (
+                            <textarea
+                              id={field.id}
+                              placeholder={field.placeholder}
+                              value={formData[field.id] || ""}
+                              onChange={(e) => handleInputChange(field.id, e.target.value)}
+                              className="w-full p-2 border rounded-md text-sm min-h-[80px]"
+                            />
+                          ) : field.type === "dropdown" ? (
+                            <select
+                              id={field.id}
+                              className="w-full p-2 border rounded-md text-sm"
+                              value={formData[field.id] || field.options?.[0] || ""}
+                              onChange={(e) => handleInputChange(field.id, e.target.value)}
                             >
-                              {showSecrets[field.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
+                              {field.options?.map((option: string) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.type === "multitag" ? (
+                            <Input
+                              id={field.id}
+                              type="text"
+                              placeholder={field.placeholder}
+                              value={formData[field.id] || ""}
+                              onChange={(e) => handleInputChange(field.id, e.target.value)}
+                              className="text-sm"
+                            />
+                            // TODO: Replace with a tag input component for better UX
+                          ) : (
+                            <Input
+                              id={field.id}
+                              type={field.type}
+                              placeholder={field.placeholder}
+                              value={formData[field.id] || ""}
+                              onChange={(e) => handleInputChange(field.id, e.target.value)}
+                              className="text-sm"
+                            />
                           )}
                         </div>
                       </motion.div>
@@ -483,7 +517,7 @@ export function AddAccount() {
                     <div>
                       <h3 className="font-semibold mb-3 text-base">Step-by-step guide:</h3>
                       <ol className="space-y-3">
-                        {selectedPlatform.guide.steps.map((step, index) => (
+                        {selectedPlatform.guide.steps.map((step: string, index: number) => (
                           <motion.li
                             key={index}
                             initial={{ opacity: 0, x: -10 }}
@@ -509,7 +543,7 @@ export function AddAccount() {
                     <div>
                       <h3 className="font-semibold mb-3 text-base">Useful links:</h3>
                       <div className="space-y-2">
-                        {selectedPlatform.guide.urls.map((link, index) => (
+                        {selectedPlatform.guide.urls.map((link: any, index: number) => (
                           <motion.div
                             key={index}
                             initial={{ opacity: 0, y: 10 }}
@@ -535,7 +569,7 @@ export function AddAccount() {
                     <div>
                       <h3 className="font-semibold mb-3 text-base">Important notes:</h3>
                       <div className="space-y-3">
-                        {selectedPlatform.guide.notes.map((note, index) => (
+                        {selectedPlatform.guide.notes.map((note: string, index: number) => (
                           <motion.div
                             key={index}
                             initial={{ opacity: 0, y: 10 }}
