@@ -24,12 +24,13 @@ import {
 import Link from "next/link"
 
 type PlatformField = {
-  id: string
-  label: string
-  placeholder: string
-  type: string
-  required?: boolean
-  options?: string[]
+  id: string;
+  label: string;
+  placeholder?: string;
+  type: string;
+  required?: boolean;
+  options?: string[];
+  help?: string;
 }
 
 const platforms: {
@@ -55,8 +56,13 @@ const platforms: {
       { id: "connectedPageId", label: "Connected Page ID", placeholder: "Facebook Page ID linked to this Instagram", type: "text", required: true },
       { id: "instagramAccessToken", label: "Instagram Access Token", placeholder: "Access token (same as FB Page token)", type: "password", required: true },
       { id: "tokenExpiryDate", label: "Token Expiry Date", placeholder: "Expiry date (optional)", type: "date", required: false },
+      { id: "tokenRefreshReminderEmail", label: "Token Refresh Reminder Email", placeholder: "Email for token expiry reminders (optional)", type: "email", required: false, help: "We'll notify you before your token expires." },
       { id: "reelCaptionTemplate", label: "Reel Caption Template", placeholder: "e.g., 🔥 {title} 🔥 #motivation #life", type: "textarea", required: false },
       { id: "hashtagPresets", label: "Hashtag Presets", placeholder: "Add hashtags (comma or enter to separate)", type: "multitag", required: false },
+      { id: "postAsReel", label: "Post as Reel", type: "toggle", required: false, help: "Enable to post as a Reel instead of a regular post." },
+      { id: "postToFeed", label: "Post to Feed", type: "toggle", required: false, help: "Enable to post to your main feed." },
+      { id: "autoUploadAfterProcessing", label: "Enable Auto Upload After Video Processing", type: "toggle", required: false, help: "Automatically upload after video is processed." },
+      { id: "preferredUploadTime", label: "Preferred Upload Time", placeholder: "e.g. 14:30 or 'Immediately'", type: "text", required: false, help: "Schedule when uploads happen after processing." },
     ],
     guide: {
       title: "How to get Instagram Business credentials",
@@ -95,8 +101,13 @@ const platforms: {
       { id: "pageId", label: "Page ID", placeholder: "Your Facebook page ID", type: "text", required: true },
       { id: "pageAccessToken", label: "Page Access Token", placeholder: "Your Facebook page access token", type: "password", required: true },
       { id: "tokenExpiryDate", label: "Token Expiry Date", placeholder: "Expiry date (optional)", type: "date", required: false },
+      { id: "tokenRefreshReminderEmail", label: "Token Refresh Reminder Email", placeholder: "Email for token expiry reminders (optional)", type: "email", required: false, help: "We'll notify you before your token expires." },
       { id: "postCaptionTemplate", label: "Post Caption Template", placeholder: "e.g. {title} - {date}", type: "textarea", required: false },
       { id: "defaultVisibility", label: "Default Visibility", placeholder: "Select visibility", type: "dropdown", options: ["Public", "Private", "Unlisted"], required: false },
+      { id: "postAsReel", label: "Post as Reel", type: "toggle", required: false, help: "Enable to post as a Reel instead of a regular post." },
+      { id: "postToFeed", label: "Post to Feed", type: "toggle", required: false, help: "Enable to post to your main feed." },
+      { id: "autoUploadAfterProcessing", label: "Enable Auto Upload After Video Processing", type: "toggle", required: false, help: "Automatically upload after video is processed." },
+      { id: "preferredUploadTime", label: "Preferred Upload Time", placeholder: "e.g. 14:30 or 'Immediately'", type: "text", required: false, help: "Schedule when uploads happen after processing." },
     ],
     guide: {
       title: "How to get Facebook Page credentials",
@@ -136,6 +147,11 @@ const platforms: {
       { id: "clientSecret", label: "Client Secret", placeholder: "Required with refresh token", type: "password", required: false },
       { id: "videoTitleTemplate", label: "Video Title Template", placeholder: "Optional SEO templates", type: "text", required: false },
       { id: "descriptionTemplate", label: "Description Template", placeholder: "Can support hashtags, etc.", type: "textarea", required: false },
+      { id: "tokenRefreshReminderEmail", label: "Token Refresh Reminder Email", placeholder: "Email for token expiry reminders (optional)", type: "email", required: false, help: "We'll notify you before your token expires." },
+      { id: "postAsReel", label: "Post as Reel", type: "toggle", required: false, help: "Enable to post as a Reel instead of a regular post." },
+      { id: "postToFeed", label: "Post to Feed", type: "toggle", required: false, help: "Enable to post to your main feed." },
+      { id: "autoUploadAfterProcessing", label: "Enable Auto Upload After Video Processing", type: "toggle", required: false, help: "Automatically upload after video is processed." },
+      { id: "preferredUploadTime", label: "Preferred Upload Time", placeholder: "e.g. 14:30 or 'Immediately'", type: "text", required: false, help: "Schedule when uploads happen after processing." },
     ],
     guide: {
       title: "How to get YouTube OAuth credentials",
@@ -375,6 +391,19 @@ export function AddAccount() {
                               className="text-sm"
                             />
                             // TODO: Replace with a tag input component for better UX
+                          ) : field.type === "toggle" ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                id={field.id}
+                                type="checkbox"
+                                checked={!!formData[field.id]}
+                                onChange={(e) => handleInputChange(field.id, e.target.checked ? "true" : "")}
+                                className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded"
+                              />
+                              <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">
+                                {field.label}
+                              </Label>
+                            </div>
                           ) : (
                             <Input
                               id={field.id}
@@ -386,6 +415,11 @@ export function AddAccount() {
                             />
                           )}
                         </div>
+                        {field.help && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {field.help}
+                          </p>
+                        )}
                       </motion.div>
                     ))}
                   </div>
