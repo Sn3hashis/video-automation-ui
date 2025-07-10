@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react"
 import Link from "next/link"
+import InstagramFacebookSetupDocs from "@/components/InstagramFacebookSetupDocs"
 
 type PlatformField = {
   id: string;
@@ -200,6 +201,7 @@ export function AddAccount() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
   const [guideOpen, setGuideOpen] = useState(false)
+  const [showDocs, setShowDocs] = useState(false)
   const { toast } = useToast()
 
   // Helper to check if all required fields are filled for the selected platform
@@ -271,9 +273,9 @@ export function AddAccount() {
     if (selectedPlatform.name === 'Facebook') {
       apiUrl = baseUrl + '/accounts/facebook';
       body = {
-        page_name: formData.pageName,
-        page_id: formData.pageId,
-        access_token: formData.pageAccessToken,
+        page_name: formData.pageName || undefined,
+        page_id: formData.pageId || undefined,
+        access_token: formData.pageAccessToken || undefined,
         token_expiry_date: formData.tokenExpiryDate || undefined,
         reminder_email: formData.tokenRefreshReminderEmail || undefined,
         caption_template: formData.postCaptionTemplate || undefined,
@@ -286,11 +288,12 @@ export function AddAccount() {
       };
     } else if (selectedPlatform.name === 'Instagram') {
       apiUrl = baseUrl + '/accounts/instagram';
+      // Collect all Instagram fields from formData
       body = {
-        instagram_username: formData.instagramUsername,
-        instagram_id: formData.businessAccountId,
-        page_id: formData.connectedPageId,
-        access_token: formData.instagramAccessToken,
+        instagram_username: formData.instagramUsername || undefined,
+        instagram_id: formData.businessAccountId || undefined,
+        page_id: formData.connectedPageId || undefined,
+        access_token: formData.instagramAccessToken || undefined,
         token_expiry_date: formData.tokenExpiryDate || undefined,
         reminder_email: formData.tokenRefreshReminderEmail || undefined,
         caption_template: formData.reelCaptionTemplate || undefined,
@@ -303,11 +306,11 @@ export function AddAccount() {
     } else if (selectedPlatform.name === 'YouTube') {
       apiUrl = baseUrl + '/accounts/youtube';
       body = {
-        channel_id: formData.channelName,
-        access_token: formData.accessToken,
-        refresh_token: formData.refreshToken,
-        client_id: formData.clientId,
-        client_secret: formData.clientSecret,
+        channel_name: formData.channelName || undefined,
+        access_token: formData.accessToken || undefined,
+        refresh_token: formData.refreshToken || undefined,
+        client_id: formData.clientId || undefined,
+        client_secret: formData.clientSecret || undefined,
         token_expiry_date: formData.tokenExpiryDate || undefined,
         reminder_email: formData.tokenRefreshReminderEmail || undefined,
         video_title_template: formData.videoTitleTemplate || undefined,
@@ -316,6 +319,7 @@ export function AddAccount() {
         post_to_feed: formData.postToFeed === 'true',
         auto_upload: formData.autoUploadAfterProcessing === 'true',
         preferred_upload_time: formData.preferredUploadTime || undefined,
+        upload_privacy: formData.uploadPrivacy || undefined,
       };
     }
     if (apiUrl) {
@@ -354,6 +358,10 @@ export function AddAccount() {
       description: "Redirect URI has been copied to your clipboard.",
       variant: "default",
     })
+  }
+
+  const handleShowDocs = () => {
+    setShowDocs(true)
   }
 
   return (
@@ -829,6 +837,19 @@ export function AddAccount() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Documentation Section - Instagram & Facebook Setup */}
+      {showDocs && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3 }}
+          className="mt-6"
+        >
+          <InstagramFacebookSetupDocs />
+        </motion.div>
+      )}
     </div>
   )
 }

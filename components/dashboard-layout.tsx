@@ -345,9 +345,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <DollarSign className="h-4 w-4" />
                     Pricing
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg apple-ease">
-                    <BookOpen className="h-4 w-4" />
-                    Documentation
+                  <DropdownMenuItem asChild className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg apple-ease">
+                    <a href="/documentation" className="flex items-center gap-2 w-full">
+                      <BookOpen className="h-4 w-4" />
+                      Documentation
+                    </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg apple-ease">
                     <HelpCircle className="h-4 w-4" />

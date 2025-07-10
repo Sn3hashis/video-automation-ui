@@ -70,6 +70,65 @@ const getStatusBadge = (status: string) => {
   }
 }
 
+const getPlatformIcon = (platform: string) => {
+  switch (platform.toLowerCase()) {
+    case "instagram":
+      return Instagram
+    case "facebook":
+      return Facebook
+    case "youtube":
+      return Youtube
+    case "twitter":
+      return Twitter
+    case "linkedin":
+      return Linkedin
+    case "tiktok":
+      return TikTok
+    default:
+      return Instagram
+  }
+}
+
+const getPlatformColor = (platform: string) => {
+  switch (platform.toLowerCase()) {
+    case "instagram":
+      return {
+        color: "from-pink-500 to-rose-500",
+        bgColor: "bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20",
+      }
+    case "facebook":
+      return {
+        color: "from-blue-500 to-blue-600",
+        bgColor: "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20",
+      }
+    case "youtube":
+      return {
+        color: "from-red-500 to-red-600",
+        bgColor: "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20",
+      }
+    case "twitter":
+      return {
+        color: "from-sky-400 to-sky-500",
+        bgColor: "bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-950/20 dark:to-sky-900/20",
+      }
+    case "linkedin":
+      return {
+        color: "from-blue-600 to-blue-700",
+        bgColor: "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20",
+      }
+    case "tiktok":
+      return {
+        color: "from-gray-800 to-gray-900",
+        bgColor: "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20",
+      }
+    default:
+      return {
+        color: "from-gray-500 to-gray-600",
+        bgColor: "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20",
+      }
+  }
+}
+
 export function AccountManagement() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,8 +138,8 @@ export function AccountManagement() {
     const fetchAccounts = async () => {
       setLoading(true)
       try {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/accounts', { cache: 'no-store' })
-        if (!res.ok) throw new Error('Failed to fetch accounts')
+        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/accounts", { cache: "no-store" })
+        if (!res.ok) throw new Error("Failed to fetch accounts")
         const data = await res.json()
         setAccounts(data)
       } catch (e) {
@@ -141,7 +200,6 @@ export function AccountManagement() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass-card border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -157,7 +215,6 @@ export function AccountManagement() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass-card border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -173,7 +230,6 @@ export function AccountManagement() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="glass-card border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -199,89 +255,134 @@ export function AccountManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Accounts List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading ? (
               <div className="col-span-full text-center text-muted-foreground py-12">Loading accounts...</div>
             ) : accounts.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-12">No connected accounts found.</div>
             ) : (
-              accounts.map((account, idx) => (
-                <Card key={account.id || idx} className="glass-card border-0">
-                  <CardHeader className="flex flex-row items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      {/* Use platform icon if available, fallback to generic */}
-                      {account.platform === 'Instagram' && <Instagram className="h-6 w-6 text-pink-600" />}
-                      {account.platform === 'Facebook' && <Facebook className="h-6 w-6 text-blue-600" />}
-                      {account.platform === 'YouTube' && <Youtube className="h-6 w-6 text-red-600" />}
-                      {/* ...add more as needed... */}
-                      <div>
-                        <CardTitle className="text-lg font-semibold">
-                          {account.username || account.page_name || account.channel_id || account.platform}
-                        </CardTitle>
-                        <div className="text-xs text-muted-foreground">{account.platform}</div>
-                      </div>
-                    </div>
-                    <div>{getStatusIcon(account.status || 'connected')}</div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="flex-1">
-                        <div className="flex gap-2 items-center">
-                          {getStatusBadge(account.status || 'connected')}
-                          <span className="text-xs text-muted-foreground">{account.lastSync || ''}</span>
+              accounts.map((account, index) => {
+                const PlatformIcon = getPlatformIcon(account.platform)
+                const platformColors = getPlatformColor(account.platform)
+
+                return (
+                  <div
+                    key={account.id || index}
+                    className={`relative overflow-hidden rounded-2xl glass-effect apple-ease hover:glass-hover-lift ${platformColors.bgColor}`}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`p-2 rounded-xl bg-gradient-to-r ${platformColors.color} text-white shadow-lg`}
+                          >
+                            <PlatformIcon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm">{account.platform}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {account.username || account.page_name || account.channel_id || account.platform}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleSync(account.id)}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Sync
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleReconnect(account.id)}>
-                            <Settings className="mr-2 h-4 w-4" /> Reconnect
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/accounts/${account.id}/edit`}>
-                              <ExternalLink className="mr-2 h-4 w-4" /> Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" /> Disconnect
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 glass-button border-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="glass-dropdown border-0">
+                            <DropdownMenuItem onClick={() => handleSync(account.id)} className="apple-ease">
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              Sync Now
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="apple-ease">
+                              <Settings className="mr-2 h-4 w-4" />
+                              Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild className="apple-ease">
+                              <Link href={`/accounts/${account.id}/edit`}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View Profile
+                              </Link>
+                            </DropdownMenuItem>
+                            {account.status === "error" ? (
+                              <DropdownMenuItem onClick={() => handleReconnect(account.id)} className="apple-ease">
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Reconnect
                               </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to disconnect this account? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDisconnect(account.id)}>
-                                  Disconnect
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            ) : (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="text-red-600 focus:text-red-600 apple-ease"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Disconnect
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="glass-modal border-0">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to disconnect your {account.platform} account? This will
+                                      stop all automated posting to this platform.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="glass-button border-0">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDisconnect(account.id)}
+                                      className="glass-button border-0 bg-red-500 text-white hover:bg-red-600"
+                                    >
+                                      Disconnect
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Status</span>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(account.status || "connected")}
+                            {getStatusBadge(account.status || "connected")}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div className="glass-effect rounded-lg p-3 border-0">
+                            <p className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                              {account.followers || "-"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Followers</p>
+                          </div>
+                          <div className="glass-effect rounded-lg p-3 border-0">
+                            <p className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                              {account.posts || "-"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Posts</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Engagement Rate</span>
+                            <span className="font-medium">{account.engagement || "0%"}</span>
+                          </div>
+                          <Progress
+                            value={Number.parseFloat(account.engagement?.replace("%", "") || "0")}
+                            className="h-2"
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">Last sync: {account.lastSync || "Never"}</div>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                      <span>Followers: {account.followers || '-'}</span>
-                      <span>Engagement: {account.engagement || '-'}</span>
-                      <span>Posts: {account.posts || '-'}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                  </div>
+                )
+              })
             )}
           </div>
         </CardContent>
