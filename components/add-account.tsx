@@ -181,11 +181,31 @@ const platforms: {
 
 export function AddAccount() {
   const [selectedPlatform, setSelectedPlatform] = useState(platforms[0])
-  const [formData, setFormData] = useState<{ [key: string]: string }>({})
+  const [formData, setFormData] = useState<{ [key: string]: string }>(() => {
+    // Set default checked for toggles
+    const initial: { [key: string]: string } = {}
+    platforms.forEach((platform) => {
+      platform.fields.forEach((field) => {
+        if (field.type === 'toggle') {
+          if (field.id === 'postAsReel' || field.id === 'postToFeed' || field.id === 'autoUploadAfterProcessing') {
+            initial[field.id] = 'true';
+          }
+        }
+      })
+    })
+    return initial
+  })
+  const [highlightMissing, setHighlightMissing] = useState<string[]>([])
   const [showSecrets, setShowSecrets] = useState<{ [key: string]: boolean }>({})
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle")
+  const [guideOpen, setGuideOpen] = useState(false)
   const { toast } = useToast()
+
+  // Helper to check if all required fields are filled for the selected platform
+  const requiredFieldsFilled = selectedPlatform.fields
+    .filter((f) => f.required)
+    .every((f) => !!formData[f.id]?.trim())
 
   const handleInputChange = (fieldId: string, value: string) => {
     setFormData((prev) => ({ ...prev, [fieldId]: value }))
@@ -196,6 +216,16 @@ export function AddAccount() {
   }
 
   const handleTestConnection = async () => {
+    if (!requiredFieldsFilled) {
+      setHighlightMissing(selectedPlatform.fields.filter(f => f.required && !formData[f.id]?.trim()).map(f => f.id))
+      toast({
+        title: 'Missing Required Fields',
+        description: 'Please fill all required fields before testing connection.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setHighlightMissing([])
     setIsConnecting(true)
     setConnectionStatus("testing")
 
@@ -225,13 +255,96 @@ export function AddAccount() {
   }
 
   const handleSaveAccount = async () => {
-    // Handle saving the account
-    console.log("Saving account:", { platform: selectedPlatform.name, data: formData })
-    toast({
-      title: "Account Saved",
-      description: `${selectedPlatform.name} account has been saved successfully!`,
-      variant: "default",
-    })
+    if (!requiredFieldsFilled) {
+      setHighlightMissing(selectedPlatform.fields.filter(f => f.required && !formData[f.id]?.trim()).map(f => f.id))
+      toast({
+        title: 'Missing Required Fields',
+        description: 'Please fill all required fields before saving.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setHighlightMissing([])
+    let apiUrl = '';
+    let body: any = {};
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    if (selectedPlatform.name === 'Facebook') {
+      apiUrl = baseUrl + '/accounts/facebook';
+      body = {
+        page_name: formData.pageName,
+        page_id: formData.pageId,
+        access_token: formData.pageAccessToken,
+        token_expiry_date: formData.tokenExpiryDate || undefined,
+        reminder_email: formData.tokenRefreshReminderEmail || undefined,
+        caption_template: formData.postCaptionTemplate || undefined,
+        default_visibility: formData.defaultVisibility || undefined,
+        instagram_id: formData.connectedPageId || undefined,
+        post_as_reel: formData.postAsReel === 'true',
+        post_to_feed: formData.postToFeed === 'true',
+        auto_upload: formData.autoUploadAfterProcessing === 'true',
+        preferred_upload_time: formData.preferredUploadTime || undefined,
+      };
+    } else if (selectedPlatform.name === 'Instagram') {
+      apiUrl = baseUrl + '/accounts/instagram';
+      body = {
+        instagram_username: formData.instagramUsername,
+        instagram_id: formData.businessAccountId,
+        page_id: formData.connectedPageId,
+        access_token: formData.instagramAccessToken,
+        token_expiry_date: formData.tokenExpiryDate || undefined,
+        reminder_email: formData.tokenRefreshReminderEmail || undefined,
+        caption_template: formData.reelCaptionTemplate || undefined,
+        hashtag_presets: formData.hashtagPresets || undefined,
+        post_as_reel: formData.postAsReel === 'true',
+        post_to_feed: formData.postToFeed === 'true',
+        auto_upload: formData.autoUploadAfterProcessing === 'true',
+        preferred_upload_time: formData.preferredUploadTime || undefined,
+      };
+    } else if (selectedPlatform.name === 'YouTube') {
+      apiUrl = baseUrl + '/accounts/youtube';
+      body = {
+        channel_id: formData.channelName,
+        access_token: formData.accessToken,
+        refresh_token: formData.refreshToken,
+        client_id: formData.clientId,
+        client_secret: formData.clientSecret,
+        token_expiry_date: formData.tokenExpiryDate || undefined,
+        reminder_email: formData.tokenRefreshReminderEmail || undefined,
+        video_title_template: formData.videoTitleTemplate || undefined,
+        description_template: formData.descriptionTemplate || undefined,
+        post_as_reel: formData.postAsReel === 'true',
+        post_to_feed: formData.postToFeed === 'true',
+        auto_upload: formData.autoUploadAfterProcessing === 'true',
+        preferred_upload_time: formData.preferredUploadTime || undefined,
+      };
+    }
+    if (apiUrl) {
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error('API error');
+        toast({
+          title: 'Account Saved',
+          description: `${selectedPlatform.name} account has been saved successfully!`,
+          variant: 'default',
+        });
+      } catch (e) {
+        toast({
+          title: 'Error',
+          description: `Failed to save ${selectedPlatform.name} account.`,
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: 'Account Saved',
+        description: `${selectedPlatform.name} account has been saved successfully!`,
+        variant: 'default',
+      });
+    }
   }
 
   const copyToClipboard = (text: string) => {
@@ -304,7 +417,7 @@ export function AddAccount() {
       </motion.div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] gap-6">
         {/* Left Side - Credentials Form */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
           <Card className="h-fit">
@@ -327,102 +440,149 @@ export function AddAccount() {
                   className="space-y-4"
                 >
                   <div className="space-y-4 max-w-full">
-                    {selectedPlatform.fields.map((field, index) => (
-                      <motion.div
-                        key={field.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="space-y-2"
-                      >
-                        <Label htmlFor={field.id} className="text-sm font-medium">
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        <div className="relative">
-                          {field.type === "password" ? (
-                            <>
-                              <Input
+                    {selectedPlatform.fields
+                      .filter((field, index) => !["postAsReel", "postToFeed", "autoUploadAfterProcessing"].includes(field.id))
+                      .map((field, index) => (
+                        <motion.div
+                          key={field.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="space-y-2"
+                        >
+                          <Label htmlFor={field.id} className={`text-sm font-medium${field.required ? '': ''}${highlightMissing.includes(field.id) ? ' text-red-500' : ''}`}>
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                          <div className="relative">
+                            {field.type === "password" ? (
+                              <>
+                                <Input
+                                  id={field.id}
+                                  type={showSecrets[field.id] ? "text" : "password"}
+                                  placeholder={field.placeholder}
+                                  value={formData[field.id] || ""}
+                                  onChange={(e) => handleInputChange(field.id, e.target.value)}
+                                  className={`pr-10 text-sm${highlightMissing.includes(field.id) ? ' border-red-500' : ''}`}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3"
+                                  onClick={() => toggleSecretVisibility(field.id)}
+                                >
+                                  {showSecrets[field.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                              </>
+                            ) : field.type === "textarea" ? (
+                              <textarea
                                 id={field.id}
-                                type={showSecrets[field.id] ? "text" : "password"}
                                 placeholder={field.placeholder}
                                 value={formData[field.id] || ""}
                                 onChange={(e) => handleInputChange(field.id, e.target.value)}
-                                className="pr-10 text-sm"
+                                className={`w-full p-2 border rounded-md text-sm min-h-[80px]${highlightMissing.includes(field.id) ? ' border-red-500' : ''}`}
                               />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-0 top-0 h-full px-3"
-                                onClick={() => toggleSecretVisibility(field.id)}
-                              >
-                                {showSecrets[field.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
-                            </>
-                          ) : field.type === "textarea" ? (
-                            <textarea
-                              id={field.id}
-                              placeholder={field.placeholder}
-                              value={formData[field.id] || ""}
-                              onChange={(e) => handleInputChange(field.id, e.target.value)}
-                              className="w-full p-2 border rounded-md text-sm min-h-[80px]"
-                            />
-                          ) : field.type === "dropdown" ? (
-                            <select
-                              id={field.id}
-                              className="w-full p-2 border rounded-md text-sm"
-                              value={formData[field.id] || field.options?.[0] || ""}
-                              onChange={(e) => handleInputChange(field.id, e.target.value)}
-                            >
-                              {field.options?.map((option: string) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                          ) : field.type === "multitag" ? (
-                            <Input
-                              id={field.id}
-                              type="text"
-                              placeholder={field.placeholder}
-                              value={formData[field.id] || ""}
-                              onChange={(e) => handleInputChange(field.id, e.target.value)}
-                              className="text-sm"
-                            />
-                            // TODO: Replace with a tag input component for better UX
-                          ) : field.type === "toggle" ? (
-                            <div className="flex items-center gap-2">
-                              <input
+                            ) : field.type === "dropdown" ? (
+                              <select
                                 id={field.id}
-                                type="checkbox"
-                                checked={!!formData[field.id]}
-                                onChange={(e) => handleInputChange(field.id, e.target.checked ? "true" : "")}
-                                className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded"
+                                className={`w-full p-2 border rounded-md text-sm${highlightMissing.includes(field.id) ? ' border-red-500' : ''}`}
+                                value={formData[field.id] || field.options?.[0] || ""}
+                                onChange={(e) => handleInputChange(field.id, e.target.value)}
+                              >
+                                {field.options?.map((option: string) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : field.type === "multitag" ? (
+                              <Input
+                                id={field.id}
+                                type="text"
+                                placeholder={field.placeholder}
+                                value={formData[field.id] || ""}
+                                onChange={(e) => handleInputChange(field.id, e.target.value)}
+                                className={`text-sm${highlightMissing.includes(field.id) ? ' border-red-500' : ''}`}
                               />
-                              <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">
-                                {field.label}
-                              </Label>
-                            </div>
-                          ) : (
-                            <Input
-                              id={field.id}
-                              type={field.type}
-                              placeholder={field.placeholder}
-                              value={formData[field.id] || ""}
-                              onChange={(e) => handleInputChange(field.id, e.target.value)}
-                              className="text-sm"
-                            />
+                              // TODO: Replace with a tag input component for better UX
+                            ) : field.type === "toggle" ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  id={field.id}
+                                  type="checkbox"
+                                  checked={formData[field.id] === 'true'}
+                                  onChange={(e) => handleInputChange(field.id, e.target.checked ? "true" : "")}
+                                  className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded"
+                                />
+                                <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">
+                                  {field.label}
+                                </Label>
+                              </div>
+                            ) : (
+                              <Input
+                                id={field.id}
+                                type={field.type}
+                                placeholder={field.placeholder}
+                                value={formData[field.id] || ""}
+                                onChange={(e) => handleInputChange(field.id, e.target.value)}
+                                className="text-sm"
+                              />
+                            )}
+                          </div>
+                          {field.help && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {field.help}
+                            </p>
                           )}
-                        </div>
-                        {field.help && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {field.help}
-                          </p>
-                        )}
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      ))}
                   </div>
+
+                  {/* Render toggles in one row */}
+                  {selectedPlatform.fields.some(f => f.id === 'postAsReel') && (
+                    <div className="flex items-center gap-6 mb-2">
+                      {["postAsReel", "postToFeed", "autoUploadAfterProcessing"].map((toggleId) => {
+                        const field = selectedPlatform.fields.find(f => f.id === toggleId)
+                        if (!field) return null
+                        return (
+                          <div key={toggleId} className="flex items-center gap-2 relative">
+                            <input
+                              id={field.id}
+                              type="checkbox"
+                              checked={formData[field.id] === 'true'}
+                              onChange={(e) => handleInputChange(field.id, e.target.checked ? "true" : "")}
+                              className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded"
+                            />
+                            <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">
+                              {field.label}
+                            </Label>
+                            <button
+                              type="button"
+                              className="ml-1 text-muted-foreground hover:text-primary"
+                              tabIndex={-1}
+                              aria-label={`Info about ${field.label}`}
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                              onClick={() => {
+                                toast({
+                                  title: field.label,
+                                  description:
+                                    field.id === 'postAsReel'
+                                      ? 'Enable to post as a Reel instead of a regular post.'
+                                      : field.id === 'postToFeed'
+                                      ? 'Enable to post to your main feed.'
+                                      : 'Automatically upload after video is processed.',
+                                  variant: 'default',
+                                })
+                              }}
+                            >
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><text x="12" y="16" textAnchor="middle" fontSize="12" fill="currentColor">i</text></svg>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </motion.div>
               </AnimatePresence>
 
@@ -533,115 +693,139 @@ export function AddAccount() {
 
         {/* Right Side - Setup Guide */}
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>{selectedPlatform.guide.title}</CardTitle>
+          <Card className="h-fit min-w-[0] max-w-[340px] w-full">
+            <CardHeader className="flex flex-row items-center justify-between p-2">
+              <CardTitle className="text-base">How to get credentials</CardTitle>
+              <Button
+                variant="secondary"
+                className="ml-auto font-semibold flex items-center gap-1 border-2 border-primary text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded-md shadow text-xs"
+                onClick={() => setGuideOpen((open) => !open)}
+                aria-expanded={guideOpen}
+                aria-controls="platform-guide-panel"
+              >
+                {guideOpen ? 'Hide' : 'Show'}
+                <span className={`transition-transform ${guideOpen ? 'rotate-180' : ''}`}>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+              </Button>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-6 max-w-full">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedPlatform.name}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-6"
-                  >
-                    {/* Steps */}
-                    <div>
-                      <h3 className="font-semibold mb-3 text-base">Step-by-step guide:</h3>
-                      <ol className="space-y-3">
-                        {selectedPlatform.guide.steps.map((step: string, index: number) => (
-                          <motion.li
-                            key={index}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex gap-3"
-                          >
-                            <Badge
-                              variant="outline"
-                              className="min-w-6 h-6 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0 mt-0.5"
-                            >
-                              {index + 1}
-                            </Badge>
-                            <span className="text-sm leading-relaxed break-words">{step}</span>
-                          </motion.li>
-                        ))}
-                      </ol>
+            <AnimatePresence initial={false}>
+              {guideOpen && (
+                <motion.div
+                  id="platform-guide-panel"
+                  initial={{ x: 300, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 300, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                >
+                  <CardContent className="space-y-6">
+                    <div className="space-y-6 max-w-full">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={selectedPlatform.name}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          className="space-y-6"
+                        >
+                          {/* Steps */}
+                          <div>
+                            <h3 className="font-semibold mb-3 text-base">Step-by-step guide:</h3>
+                            <ol className="space-y-3">
+                              {selectedPlatform.guide.steps.map((step: string, index: number) => (
+                                <motion.li
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex gap-3"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className="min-w-6 h-6 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0 mt-0.5"
+                                  >
+                                    {index + 1}
+                                  </Badge>
+                                  <span className="text-sm leading-relaxed break-words">{step}</span>
+                                </motion.li>
+                              ))}
+                            </ol>
+                          </div>
+
+                          <Separator />
+
+                          {/* Useful Links */}
+                          <div>
+                            <h3 className="font-semibold mb-3 text-base">Useful links:</h3>
+                            <div className="space-y-2">
+                              {selectedPlatform.guide.urls.map((link: any, index: number) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.5 + index * 0.1 }}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-between bg-transparent text-left h-auto p-3"
+                                    onClick={() => window.open(link.url, "_blank")}
+                                  >
+                                    <span className="text-sm break-words text-left flex-1 mr-2">{link.label}</span>
+                                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                                  </Button>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          {/* Important Notes */}
+                          <div>
+                            <h3 className="font-semibold mb-3 text-base">Important notes:</h3>
+                            <div className="space-y-3">
+                              {selectedPlatform.guide.notes.map((note: string, index: number) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.7 + index * 0.1 }}
+                                  className="flex gap-3 p-3 bg-muted/50 rounded-lg"
+                                >
+                                  <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                  <p className="text-sm text-muted-foreground leading-relaxed break-words">{note}</p>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Quick Copy Section */}
+                          <div className="p-4 bg-muted/30 rounded-lg">
+                            <h4 className="font-medium mb-3 text-sm">Quick copy:</h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between p-2 bg-background rounded border">
+                                <span className="text-sm font-mono break-all flex-1 mr-2">Redirect URI:</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="flex-shrink-0"
+                                  onClick={() => copyToClipboard("https://reelbrandpro.com/auth/callback")}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <code className="text-xs text-muted-foreground block break-all p-2 bg-muted rounded">
+                                https://reelbrandpro.com/auth/callback
+                              </code>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
                     </div>
-
-                    <Separator />
-
-                    {/* Useful Links */}
-                    <div>
-                      <h3 className="font-semibold mb-3 text-base">Useful links:</h3>
-                      <div className="space-y-2">
-                        {selectedPlatform.guide.urls.map((link: any, index: number) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.5 + index * 0.1 }}
-                          >
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between bg-transparent text-left h-auto p-3"
-                              onClick={() => window.open(link.url, "_blank")}
-                            >
-                              <span className="text-sm break-words text-left flex-1 mr-2">{link.label}</span>
-                              <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                            </Button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Important Notes */}
-                    <div>
-                      <h3 className="font-semibold mb-3 text-base">Important notes:</h3>
-                      <div className="space-y-3">
-                        {selectedPlatform.guide.notes.map((note: string, index: number) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.7 + index * 0.1 }}
-                            className="flex gap-3 p-3 bg-muted/50 rounded-lg"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                            <p className="text-sm text-muted-foreground leading-relaxed break-words">{note}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Quick Copy Section */}
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <h4 className="font-medium mb-3 text-sm">Quick copy:</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-2 bg-background rounded border">
-                          <span className="text-sm font-mono break-all flex-1 mr-2">Redirect URI:</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="flex-shrink-0"
-                            onClick={() => copyToClipboard("https://reelbrandpro.com/auth/callback")}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <code className="text-xs text-muted-foreground block break-all p-2 bg-muted rounded">
-                          https://reelbrandpro.com/auth/callback
-                        </code>
-                      </div>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </CardContent>
+                  </CardContent>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Card>
         </motion.div>
       </div>

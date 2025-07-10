@@ -5,7 +5,9 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const ToastProvider = ToastPrimitives.Provider
+const ToastProvider = (props: any) => (
+  <ToastPrimitives.Provider duration={2000} {...props} />
+)
 
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
@@ -27,8 +29,8 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
-        destructive: "destructive group border-destructive bg-destructive text-destructive-foreground",
+        default: "border bg-background text-foreground !text-black !bg-white !border-gray-300",
+        destructive: "destructive group border-destructive bg-destructive text-destructive-foreground !text-white !bg-red-600 !border-red-400",
       },
     },
     defaultVariants: {
