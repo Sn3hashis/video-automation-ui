@@ -180,9 +180,20 @@ const platforms: {
   },
 ]
 
-export function AddAccount() {
-  const [selectedPlatform, setSelectedPlatform] = useState(platforms[0])
+export function AddAccount({ initialData = null, mode = "add" }: { initialData?: any, mode?: "add" | "edit" }) {
+  // If initialData is provided, use it to prefill formData
+  const [selectedPlatform, setSelectedPlatform] = useState(() => {
+    if (initialData && initialData.platform) {
+      const found = platforms.find(p => p.name.toLowerCase() === initialData.platform.toLowerCase())
+      return found || platforms[0]
+    }
+    return platforms[0]
+  })
   const [formData, setFormData] = useState<{ [key: string]: string }>(() => {
+    if (initialData) {
+      // Map initialData to formData keys
+      return { ...initialData }
+    }
     // Set default checked for toggles
     const initial: { [key: string]: string } = {}
     platforms.forEach((platform) => {
@@ -270,62 +281,45 @@ export function AddAccount() {
     let apiUrl = '';
     let body: any = {};
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    if (selectedPlatform.name === 'Facebook') {
-      apiUrl = baseUrl + '/accounts/facebook';
-      body = {
-        page_name: formData.pageName || undefined,
-        page_id: formData.pageId || undefined,
-        access_token: formData.pageAccessToken || undefined,
-        token_expiry_date: formData.tokenExpiryDate || undefined,
-        reminder_email: formData.tokenRefreshReminderEmail || undefined,
-        caption_template: formData.postCaptionTemplate || undefined,
-        default_visibility: formData.defaultVisibility || undefined,
-        instagram_id: formData.connectedPageId || undefined,
-        post_as_reel: formData.postAsReel === 'true',
-        post_to_feed: formData.postToFeed === 'true',
-        auto_upload: formData.autoUploadAfterProcessing === 'true',
-        preferred_upload_time: formData.preferredUploadTime || undefined,
-      };
-    } else if (selectedPlatform.name === 'Instagram') {
-      apiUrl = baseUrl + '/accounts/instagram';
-      // Collect all Instagram fields from formData
-      body = {
-        instagram_username: formData.instagramUsername || undefined,
-        instagram_id: formData.businessAccountId || undefined,
-        page_id: formData.connectedPageId || undefined,
-        access_token: formData.instagramAccessToken || undefined,
-        token_expiry_date: formData.tokenExpiryDate || undefined,
-        reminder_email: formData.tokenRefreshReminderEmail || undefined,
-        caption_template: formData.reelCaptionTemplate || undefined,
-        hashtag_presets: formData.hashtagPresets || undefined,
-        post_as_reel: formData.postAsReel === 'true',
-        post_to_feed: formData.postToFeed === 'true',
-        auto_upload: formData.autoUploadAfterProcessing === 'true',
-        preferred_upload_time: formData.preferredUploadTime || undefined,
-      };
-    } else if (selectedPlatform.name === 'YouTube') {
-      apiUrl = baseUrl + '/accounts/youtube';
-      body = {
-        channel_name: formData.channelName || undefined,
-        access_token: formData.accessToken || undefined,
-        refresh_token: formData.refreshToken || undefined,
-        client_id: formData.clientId || undefined,
-        client_secret: formData.clientSecret || undefined,
-        token_expiry_date: formData.tokenExpiryDate || undefined,
-        reminder_email: formData.tokenRefreshReminderEmail || undefined,
-        video_title_template: formData.videoTitleTemplate || undefined,
-        description_template: formData.descriptionTemplate || undefined,
-        post_as_reel: formData.postAsReel === 'true',
-        post_to_feed: formData.postToFeed === 'true',
-        auto_upload: formData.autoUploadAfterProcessing === 'true',
-        preferred_upload_time: formData.preferredUploadTime || undefined,
-        upload_privacy: formData.uploadPrivacy || undefined,
-      };
+    let method = 'POST';
+    if (mode === 'edit' && initialData && initialData.id) {
+      // Use PATCH for update
+      if (selectedPlatform.name === 'Facebook') {
+        apiUrl = `${baseUrl}/accounts/facebook/${initialData.id}`;
+      } else if (selectedPlatform.name === 'Instagram') {
+        apiUrl = `${baseUrl}/accounts/instagram/${initialData.id}`;
+      } else if (selectedPlatform.name === 'YouTube') {
+        apiUrl = `${baseUrl}/accounts/youtube/${initialData.id}`;
+      }
+      method = 'PATCH';
+    } else {
+      if (selectedPlatform.name === 'Facebook') {
+        apiUrl = baseUrl + '/accounts/facebook';
+      } else if (selectedPlatform.name === 'Instagram') {
+        apiUrl = baseUrl + '/accounts/instagram';
+      } else if (selectedPlatform.name === 'YouTube') {
+        apiUrl = baseUrl + '/accounts/youtube';
+      }
     }
+    // Collect all fields from formData
+    body = {
+      page_name: formData.pageName || undefined,
+      page_id: formData.pageId || undefined,
+      access_token: formData.pageAccessToken || undefined,
+      token_expiry_date: formData.tokenExpiryDate || undefined,
+      reminder_email: formData.tokenRefreshReminderEmail || undefined,
+      caption_template: formData.postCaptionTemplate || undefined,
+      default_visibility: formData.defaultVisibility || undefined,
+      instagram_id: formData.connectedPageId || undefined, // Only this for Facebook
+      post_as_reel: formData.postAsReel === 'true',
+      post_to_feed: formData.postToFeed === 'true',
+      auto_upload: formData.autoUploadAfterProcessing === 'true',
+      preferred_upload_time: formData.preferredUploadTime || undefined,
+    };
     if (apiUrl) {
       try {
         const res = await fetch(apiUrl, {
-          method: 'POST',
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });

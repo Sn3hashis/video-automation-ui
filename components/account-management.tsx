@@ -39,6 +39,7 @@ import {
   MessageCircle,
 } from "lucide-react"
 import Link from "next/link"
+import EditAccountDialog from "@/components/edit-account-dialog"
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -133,12 +134,14 @@ export function AccountManagement() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAccount, setSelectedAccount] = useState<number | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editAccountId, setEditAccountId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchAccounts = async () => {
       setLoading(true)
       try {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/accounts", { cache: "no-store" })
+        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/accounts/", { cache: "no-store" })
         if (!res.ok) throw new Error("Failed to fetch accounts")
         const data = await res.json()
         setAccounts(data)
@@ -163,6 +166,11 @@ export function AccountManagement() {
   const handleSync = (accountId: number) => {
     console.log("Syncing account:", accountId)
     // Handle sync logic here
+  }
+
+  const handleEdit = (id: string) => {
+    setEditAccountId(id)
+    setEditDialogOpen(true)
   }
 
   return (
@@ -279,9 +287,15 @@ export function AccountManagement() {
                             <PlatformIcon className="h-5 w-5" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-sm">{account.platform}</h3>
+                            <h3 className="font-semibold text-sm">
+                              {account.platform === "Instagram"
+                                ? `@${account.username || account.page_name || account.channel_id || "username"}`
+                                : account.platform}
+                            </h3>
                             <p className="text-xs text-muted-foreground">
-                              {account.username || account.page_name || account.channel_id || account.platform}
+                              {account.platform === "Instagram"
+                                ? account.platform
+                                : account.username || account.page_name || account.channel_id || account.platform}
                             </p>
                           </div>
                         </div>
@@ -296,7 +310,7 @@ export function AccountManagement() {
                               <RefreshCw className="mr-2 h-4 w-4" />
                               Sync Now
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="apple-ease">
+                            <DropdownMenuItem onClick={() => handleEdit(account.id)} className="apple-ease">
                               <Settings className="mr-2 h-4 w-4" />
                               Settings
                             </DropdownMenuItem>
@@ -387,6 +401,16 @@ export function AccountManagement() {
           </div>
         </CardContent>
       </Card>
+      <EditAccountDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        accountId={editAccountId}
+        onSave={() => {
+          // Optionally refresh accounts list here
+          setEditDialogOpen(false)
+        }}
+      />
     </div>
   )
 }
+export default AccountManagement
